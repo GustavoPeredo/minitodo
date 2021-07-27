@@ -1,6 +1,6 @@
 minitodo_sources = [
   cargo_sources,
-  'main.rs',
+  'main.rs'
 ]
 
 minitodo_deps = [
