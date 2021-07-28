@@ -2,16 +2,15 @@ use crate::files::{Config, Hours, Week};
 
 use chrono::Duration;
 use chrono::MIN_DATETIME;
-use chrono::prelude::*;
 use chrono::NaiveDate;
 
-pub fn create_hours(hours: &Hours) -> String {
+pub fn create_hours(config: &Config) -> String {
     let day_hours = MIN_DATETIME + Duration::hours(24);
     let mut day = String::new();
     let mut looptime = MIN_DATETIME;
 
-    let line_length = hours.line_length as usize;
-    let text_format = &hours.text_format;
+    let line_length = config.hours.line_length as usize;
+    let text_format = &config.hours.text_format;
 
     while looptime < day_hours {
 
@@ -23,7 +22,7 @@ pub fn create_hours(hours: &Hours) -> String {
         day.push_str("|");
         day.push_str("\n");
 
-        looptime = looptime +  Duration::hours(24)/(24/hours.hours);
+        looptime = looptime +  Duration::hours(24)/(24/config.hours.hours);
     }
     day.push_str(&"-".repeat(line_length));
     day
@@ -40,7 +39,7 @@ pub fn create_week(config: &Config) -> String {
     let mut max_lines: u32 = 0;
 
     for weekday in weekdays.iter() {
-        let day = create_hours(&config.hours);
+        let day = create_hours(&config);
         let day_as_vec = day.split("\n").collect::<Vec<&str>>();
 
         if day_as_vec.len() as u32 > max_lines {
