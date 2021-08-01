@@ -37,7 +37,14 @@ pub struct Database {
     pub path: String,
     pub filename: String,
 }
- 
+
+pub struct TaskLine {
+    pub task: String,
+    pub due: String,
+    pub priority: String,
+    pub line: i32,
+}
+
 pub struct Task<Tz: TimeZone> {
     pub task: String,
     pub due: DateTime<Tz>,
@@ -158,5 +165,71 @@ where Tz::Offset: std::fmt::Display,  {
     fs::write(
         Path::new(&config_file.database.path).
         join(&config_file.database.filename),
-        buffer)
+        buffer
+    )
+}
+
+pub fn read_from_database(config_file: &Config) -> Vec<TaskLine> {
+    let mut line_split: Vec<&str>;
+
+    let file = fs::read_to_string(
+        Path::new(&config_file.database.path).
+        join(&config_file.database.filename)).unwrap();
+
+    let database: Vec<&str> = file.split("\n").collect();
+
+    let mut database_as_vec: Vec<TaskLine> = Vec::new();
+
+    for i in 0..(database.len()) {
+        line_split = database[i].split(" due:").collect();
+        if line_split.len() > 1 {
+            database_as_vec.push(
+                TaskLine {
+                    task: line_split[0][4..].to_string(),
+                    due: line_split[1].to_string(),
+                    priority: line_split[0][0..3].to_string(),
+                    line: i as i32,
+                }
+            );
+        }
+    }
+    database_as_vec
+}
+
+pub fn remove_from_database(config_file: &Config, task_name: String) -> std::io::Result<()> {
+
+    let database_as_vec: Vec<TaskLine> = read_from_database(config_file);
+
+    let file = File::open(
+        Path::new(&config_file.database.path).
+        join(&config_file.database.filename)
+    );
+
+    let mut buffer = String::new();
+
+    match file {
+        Ok(mut file) => {
+            file.read_to_string(&mut buffer).unwrap();
+        },
+        Err(error) => {
+            panic!("Error: {}", error);
+        }
+    }
+    
+    let mut buffer_vector: Vec<&str> = buffer.split("\n").collect();
+
+    for task in database_as_vec.iter() {
+        if task.task == task_name {
+            buffer_vector.remove(task.line as usize);
+        }
+    }
+
+    buffer = buffer_vector.join("\n");
+
+    fs::write(
+        Path::new(&config_file.database.path).
+        join(&config_file.database.filename),
+        buffer
+    )
+
 }

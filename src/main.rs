@@ -10,6 +10,7 @@ use chrono::offset::TimeZone;
 use std::io;
 use std::io::BufRead;
 use std::env;
+
 use atty::Stream;
 
 fn main() {
@@ -74,6 +75,11 @@ fn main() {
             println!("{}", tables::create_week(&config_file));
         } else if args.iter().any(|i| i=="day") {
             println!("{}", tables::create_hours(&config_file));
+        } else if args.iter().any(|i| i=="db") {
+            let result = files::read_from_database(&config_file);
+            for i in result.iter() {
+                println!("{}", i.task);
+            }
         } else {
             println!("Not a valid 'show' option");
         }
@@ -88,7 +94,14 @@ fn main() {
                 println!("Database not updated, no task was given")
             }
         } else if args.iter().any(|i| i=="remove") {
-            println!("{}", task.task);
+            files::remove_from_database(
+                &config_file,
+                task.task
+            ).unwrap();
+            let result = files::read_from_database(&config_file);
+            for i in result.iter() {
+                println!("{}", i.task);
+            }
         }
     }
 }
