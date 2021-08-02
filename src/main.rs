@@ -72,9 +72,9 @@ fn main() {
 
     if args.iter().any(|i| i=="show") {
         if args.iter().any(|i| i=="week") {
-            println!("{}", tables::create_week(&config_file));
+            println!("{}", tables::create_week(&config_file, Local::now().format("%Y-%m-%d(%H:%M:%S)").to_string()));
         } else if args.iter().any(|i| i=="day") {
-            println!("{}", tables::create_hours(&config_file));
+            println!("{}", tables::create_hours(&config_file, Local::now().format("%Y-%m-%d(%H:%M:%S)").to_string()));
         } else if args.iter().any(|i| i=="db") {
             let result = files::read_from_database(&config_file);
             for i in result.iter() {
