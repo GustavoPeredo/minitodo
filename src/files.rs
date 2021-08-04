@@ -23,6 +23,7 @@ pub struct Hours {
     pub hours: i32,
     pub text_format: String,
     pub min_line_length: i32,
+    pub num_lines: i32,
     pub horizontal_divisor: String,
     pub vertical_divisor: String,
 }
@@ -41,14 +42,14 @@ pub struct Database {
 pub struct TaskLine {
     pub task: String,
     pub due: String,
-    pub priority: String,
+    // pub priority: String,
     pub line: i32,
 }
 
 pub struct Task<Tz: TimeZone> {
     pub task: String,
     pub due: DateTime<Tz>,
-    pub priority: String, 
+    // pub priority: String, 
 }
 
 fn create_config_file() -> std::io::Result<()> {
@@ -158,7 +159,7 @@ where Tz::Offset: std::fmt::Display,  {
     };
 
     buffer.push_str("\n");
-    buffer.push_str(&format!("({}) ", task.priority)[..]);
+    //buffer.push_str(&format!("({}) ", task.priority)[..]);
     buffer.push_str(&format!("{} ", task.task)[..]);
     buffer.push_str(&format!("due:{}", task.due.format("%Y-%m-%d(%H:%M:%S)").to_string())[..]);
 
@@ -185,9 +186,9 @@ pub fn read_from_database(config_file: &Config) -> Vec<TaskLine> {
         if line_split.len() > 1 {
             database_as_vec.push(
                 TaskLine {
-                    task: line_split[0][4..].to_string(),
+                    task: line_split[0].to_string(),
                     due: line_split[1].to_string(),
-                    priority: line_split[0][0..3].to_string(),
+                    //priority: line_split[0][0..3].to_string(),
                     line: i as i32,
                 }
             );

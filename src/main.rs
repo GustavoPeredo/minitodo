@@ -21,7 +21,7 @@ fn main() {
     let mut task = files::Task {
         task: String::from(""),
         due: Local::now(),
-        priority: String::from("A"),
+        //priority: String::from("A"),
     };
 
     let mut args: Vec<String> = env::args().collect();
@@ -45,7 +45,8 @@ fn main() {
                 "--minlinelength" => {config_file.hours.min_line_length = args[i+1].parse::<i32>().unwrap();},
                 "--hd" => {config_file.hours.horizontal_divisor = args[i+1].to_string().replace('\n', "");},
                 "--vd" => {config_file.hours.vertical_divisor = args[i+1].to_string().replace('\n', "");},
-                "--priority" => {task.priority = args[i+1].chars().nth(0).unwrap().to_string().to_uppercase();},
+                "--startsonsunday" => {config_file.week.starts_on_monday = false;},
+                //"--priority" => {task.priority = args[i+1].chars().nth(0).unwrap().to_string().to_uppercase();},
                 "--task" => {task.task = args[i+1].to_string().replace('\n', "");},
                 "--due" => {
                     if args[i+1].eq_ignore_ascii_case("Today") {

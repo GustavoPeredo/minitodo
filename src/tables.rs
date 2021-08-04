@@ -7,12 +7,21 @@ use chrono::prelude::Local;
 use chrono::Datelike;
 
 pub fn create_hours(config_file: &Config, chosen_date: String) -> String {
+
     let day_hours = (NaiveDateTime::parse_from_str(&chosen_date, "%Y-%m-%d(%H:%M:%S)").unwrap() + Duration::days(1)).date().and_hms(0, 0, 0);
     let mut day = String::new();
     let mut looptime = NaiveDateTime::parse_from_str(&chosen_date, "%Y-%m-%d(%H:%M:%S)").unwrap().date().and_hms(0, 0, 0);
-
     let min_line_length = config_file.hours.min_line_length as usize;
     
+    let mut max_tasks_in_a_day = 0;
+    let mut tasks_in_a_time: i32;
+
+    let mut max_line_length: usize = 0;
+
+    let mut day_dict_key: Vec<String> = Vec::new();
+    let mut day_dict_value: Vec<String>;
+    let mut day_dict_values: Vec<Vec<String>> = Vec::new();
+
     let hours_div = {
         if config_file.hours.hours > 24 {
             24
@@ -26,24 +35,57 @@ pub fn create_hours(config_file: &Config, chosen_date: String) -> String {
     let database_as_vec = files::read_from_database(config_file);
 
     while looptime < day_hours {
-        day = day + &looptime.format(text_format).to_string();
-        day.push_str(&config_file.hours.horizontal_divisor.repeat(min_line_length-text_format.len()));
-        for i in database_as_vec.iter() {
-            if (looptime <= NaiveDateTime::parse_from_str(&i.due, "%Y-%m-%d(%H:%M:%S)").unwrap()) &&
-             (NaiveDateTime::parse_from_str(&i.due, "%Y-%m-%d(%H:%M:%S)").unwrap() <= looptime + Duration::hours(24)/(24/hours_div)) {
-                day.push_str("\n");
-                day.push_str(&config_file.hours.vertical_divisor);
-                day.push_str(&i.task);
-                day.push_str(&" ".repeat(min_line_length - 2 - i.task.len()));
-                day.push_str(&config_file.hours.vertical_divisor);
+
+        tasks_in_a_time = 0;
+
+        day_dict_key.push(looptime.format(text_format).to_string());
+        day_dict_value = Vec::new();
+
+        for line in 0..database_as_vec.len() {
+            if (looptime <= NaiveDateTime::parse_from_str(&database_as_vec[line].due, "%Y-%m-%d(%H:%M:%S)").unwrap()) &&
+            (NaiveDateTime::parse_from_str(&database_as_vec[line].due, "%Y-%m-%d(%H:%M:%S)").unwrap() <= looptime + Duration::hours(24)/(24/hours_div)) {
+
+                tasks_in_a_time = tasks_in_a_time + 1;
+                if database_as_vec[line].task.len() > max_line_length {
+                    max_line_length = database_as_vec[line].task.len();
+                }
+
+                day_dict_value.push((&database_as_vec[line].task[..]).to_string());
             }
         }
-        day.push_str("\n");
 
+        if tasks_in_a_time > max_tasks_in_a_day {
+            max_tasks_in_a_day = tasks_in_a_time;
+        }
+
+        day_dict_values.push(day_dict_value);
         looptime = looptime + Duration::hours(24)/(24/hours_div);
     }
 
-    day.push_str(&"-".repeat(min_line_length));
+    if max_line_length < min_line_length {
+        max_line_length = min_line_length as usize;
+    }
+
+    for i in 0..day_dict_key.len() {
+        day.push_str(&day_dict_key[i]);
+        day.push_str(&config_file.hours.horizontal_divisor.repeat(max_line_length - day_dict_key[i].len() + 2));
+        for j in 0..max_tasks_in_a_day + 1 {
+            day.push_str("\n");
+            day.push_str(&config_file.hours.vertical_divisor);
+            if j < day_dict_values[i].len() as i32 {
+                day.push_str(&day_dict_values[i][j as usize]);
+                if max_line_length - day_dict_values[i][j as usize].len() > 2 {
+                    day.push_str(&" ".repeat(max_line_length - day_dict_values[i][j as usize].len()));
+                }
+            } else {
+                day.push_str(&" ".repeat(max_line_length));
+            }
+            day.push_str(&config_file.hours.vertical_divisor);
+        }
+        day.push_str("\n");
+    }
+    day.push_str(&"-".repeat(max_line_length + 2));
+
     day
 }
 
@@ -61,7 +103,7 @@ pub fn create_week(config_file: &Config, chosen_date: String) -> String {
     let mut max_lines: u32 = 0;
 
     for weekday in 0..7 {
-        let day = create_hours(&config_file, (chosen_date_localdate + Duration::days(1)*((d_weekday + weekday - 6) as i32)).format("%Y-%m-%d(%H:%M:%S)").to_string());
+        let day = create_hours(&config_file, (chosen_date_localdate + Duration::days(1)*((weekday as i32) - (d_weekday as i32) - 1)).format("%Y-%m-%d(%H:%M:%S)").to_string());
         let day_as_vec = day.split("\n").collect::<Vec<&str>>();
 
         if day_as_vec.len() as u32 > max_lines {
@@ -70,7 +112,7 @@ pub fn create_week(config_file: &Config, chosen_date: String) -> String {
         week_as_vec.push(day.to_string());
 
         week.push_str(weekdays[weekday as usize]);
-        week.push_str(&"-".repeat(&day_as_vec[0].len() - weekdays[weekday as usize].len()));
+        week.push_str(&"-".repeat(day_as_vec[0].len() - weekdays[weekday as usize].len()));
     }
     week.push_str("\n");
 
@@ -84,9 +126,7 @@ pub fn create_week(config_file: &Config, chosen_date: String) -> String {
                     }
                 );
             } else {
-                week.push_str(&config_file.hours.vertical_divisor);
-                week.push_str(&" ".repeat(config_file.hours.min_line_length as usize - 2));
-                week.push_str(&config_file.hours.vertical_divisor);
+                week.push_str(&" ".repeat(config_file.hours.min_line_length as usize + 2));
             }
         }
         week.push_str("\n");

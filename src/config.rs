@@ -10,6 +10,7 @@ pub fn get_defaults() -> &'static str {
 r#"
 [hours]
 hours = 2
+num_lines = 8
 text_format = "%H:%M"
 min_line_length = 20
 horizontal_divisor = '-'
