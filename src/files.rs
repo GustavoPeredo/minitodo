@@ -39,16 +39,9 @@ pub struct Database {
     pub filename: String,
 }
 
-pub struct TaskLine {
+pub struct Task{
     pub task: String,
     pub due: String,
-    // pub priority: String,
-    pub line: i32,
-}
-
-pub struct Task<Tz: TimeZone> {
-    pub task: String,
-    pub due: DateTime<Tz>,
     // pub priority: String, 
 }
 
@@ -131,8 +124,7 @@ pub fn create_database_file(config_file: &Config) -> std::io::Result<()> {
     Ok(())
 }
 
-pub fn write_to_database<Tz: TimeZone>(config_file: &Config, task: &Task<Tz>) -> std::io::Result<()> 
-where Tz::Offset: std::fmt::Display,  {
+pub fn write_to_database(config_file: &Config, task: &Task) -> std::io::Result<()> {
 
     let file = File::open(
         Path::new(&config_file.database.path).
@@ -161,7 +153,7 @@ where Tz::Offset: std::fmt::Display,  {
     buffer.push_str("\n");
     //buffer.push_str(&format!("({}) ", task.priority)[..]);
     buffer.push_str(&format!("{} ", task.task)[..]);
-    buffer.push_str(&format!("due:{}", task.due.format("%Y-%m-%d(%H:%M:%S)").to_string())[..]);
+    buffer.push_str(&format!("due:{}", task.due)[..]);
 
     fs::write(
         Path::new(&config_file.database.path).
@@ -170,36 +162,9 @@ where Tz::Offset: std::fmt::Display,  {
     )
 }
 
-pub fn read_from_database(config_file: &Config) -> Vec<TaskLine> {
-    let mut line_split: Vec<&str>;
-
-    let file = fs::read_to_string(
-        Path::new(&config_file.database.path).
-        join(&config_file.database.filename)).unwrap();
-
-    let database: Vec<&str> = file.split("\n").collect();
-
-    let mut database_as_vec: Vec<TaskLine> = Vec::new();
-
-    for i in 0..(database.len()) {
-        line_split = database[i].split(" due:").collect();
-        if line_split.len() > 1 {
-            database_as_vec.push(
-                TaskLine {
-                    task: line_split[0].to_string(),
-                    due: line_split[1].to_string(),
-                    //priority: line_split[0][0..3].to_string(),
-                    line: i as i32,
-                }
-            );
-        }
-    }
-    database_as_vec
-}
-
 pub fn remove_from_database(config_file: &Config, task_name: String) -> std::io::Result<()> {
 
-    let database_as_vec: Vec<TaskLine> = read_from_database(config_file);
+    let database_as_vec: Vec<Task> = read_from_database(config_file);
 
     let file = File::open(
         Path::new(&config_file.database.path).
@@ -219,9 +184,9 @@ pub fn remove_from_database(config_file: &Config, task_name: String) -> std::io:
     
     let mut buffer_vector: Vec<&str> = buffer.split("\n").collect();
 
-    for task in database_as_vec.iter() {
-        if task.task == task_name {
-            buffer_vector.remove(task.line as usize);
+    for task in 0..database_as_vec.len() {
+        if database_as_vec[task].task.trim().to_string() == task_name.trim().to_string() {
+            buffer_vector.remove(task);
         }
     }
 
@@ -233,4 +198,45 @@ pub fn remove_from_database(config_file: &Config, task_name: String) -> std::io:
         buffer
     )
 
+}
+
+pub fn read_from_database(config_file: &Config) -> Vec<Task> {
+    let mut line_split: Vec<&str>;
+
+    let file = fs::read_to_string(
+        Path::new(&config_file.database.path).
+        join(&config_file.database.filename)).unwrap();
+
+    let database: Vec<&str> = file.split("\n").collect();
+
+    let mut database_as_vec: Vec<Task> = Vec::new();
+
+    for i in 0..(database.len()) {
+        line_split = database[i].split(" due:").collect();
+        if line_split.len() > 1 {
+            database_as_vec.push(
+                Task {
+                    task: line_split[0].to_string(),
+                    due: line_split[1].to_string(),
+                }
+            );
+        }
+    }
+    database_as_vec
+}
+
+pub fn update_database(config_file: &Config, remove_tasks: &Vec<Task>, new_tasks: &Vec<Task>) -> std::io::Result<()> {
+    for i in remove_tasks.iter() {
+        match remove_from_database(config_file, i.task.to_string()) {
+            Ok(()) => {},
+            Err(_) => {println!("Unable to remove {} fromd database", i.task);},
+        }
+    }
+    for i in new_tasks.iter() {
+        match write_to_database(config_file, i) {
+            Ok(()) => {},
+            Err(_) => {println!("Unable to remove {} fromd database", i.task);},
+        }
+    }
+    Ok(())
 }

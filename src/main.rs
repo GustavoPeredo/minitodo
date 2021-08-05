@@ -5,6 +5,7 @@ mod config;
 use chrono::prelude::Local;
 use chrono::Duration;
 use chrono::NaiveDate;
+use chrono::NaiveDateTime;
 use chrono::offset::TimeZone;
 
 use std::io;
@@ -20,11 +21,13 @@ fn main() {
 
     let mut task = files::Task {
         task: String::from(""),
-        due: Local::now(),
+        due: Local::now().format("%Y-%m-%d(%H:%M:%S)").to_string(),
         //priority: String::from("A"),
     };
 
     let mut args: Vec<String> = env::args().collect();
+
+    let mut input= String::from("");
 
     let mut pipe = String::from("");
 
@@ -43,22 +46,23 @@ fn main() {
                 "--hours" => {config_file.hours.hours = args[i+1].parse::<i32>().unwrap();},
                 "--dateformat" => {config_file.hours.text_format = args[i+1].to_string().replace('\n', "");},
                 "--minlinelength" => {config_file.hours.min_line_length = args[i+1].parse::<i32>().unwrap();},
-                "--hd" => {config_file.hours.horizontal_divisor = args[i+1].to_string().replace('\n', "");},
-                "--vd" => {config_file.hours.vertical_divisor = args[i+1].to_string().replace('\n', "");},
+                "--hd" => {config_file.hours.horizontal_divisor = args[i+1].as_bytes()[0].to_string();},
+                "--vd" => {config_file.hours.vertical_divisor = args[i+1].as_bytes()[0].to_string();},
                 "--startsonsunday" => {config_file.week.starts_on_monday = false;},
+                "--input" => {input = args[i+1].to_string();},
                 //"--priority" => {task.priority = args[i+1].chars().nth(0).unwrap().to_string().to_uppercase();},
                 "--task" => {task.task = args[i+1].to_string().replace('\n', "");},
-                "--due" => {
+                "--date" => {
                     if args[i+1].eq_ignore_ascii_case("Today") {
                         task.due = task.due;
                     } else if args[i+1].eq_ignore_ascii_case("Tommorow") {
-                        task.due = task.due + Duration::hours(24);
+                        task.due = (NaiveDateTime::parse_from_str(&task.due, "%Y-%m-%d(%H:%M:%S)").unwrap() + Duration::hours(24)).format("%Y-%m-%d(%H:%M:%S)").to_string();
                     } else if args[i+1].eq_ignore_ascii_case("NextWeek") {
-                        task.due = task.due + Duration::days(7);
+                        task.due = (NaiveDateTime::parse_from_str(&task.due, "%Y-%m-%d(%H:%M:%S)").unwrap() + Duration::days(7)).format("%Y-%m-%d(%H:%M:%S)").to_string();
                     } else {
                         match NaiveDate::parse_from_str(&args[i+1], "%Y-%m-%d") {
                             Ok(parsed) => {
-                                task.due = TimeZone::from_local_datetime(&Local, &parsed.and_hms(0,0,0)).unwrap();
+                                task.due = TimeZone::from_local_datetime(&Local, &parsed.and_hms(0,0,0)).unwrap().format("%Y-%m-%d(%H:%M:%S)").to_string();
                             },
                             Err(_) => {
                                 println!("Not properly formated, due should be formated as %Y-%m-%d")
@@ -73,9 +77,9 @@ fn main() {
 
     if args.iter().any(|i| i=="show") {
         if args.iter().any(|i| i=="week") {
-            println!("{}", tables::create_week(&config_file, Local::now().format("%Y-%m-%d(%H:%M:%S)").to_string()));
+            println!("{}", tables::create_week(&config_file, &task.due));
         } else if args.iter().any(|i| i=="day") {
-            println!("{}", tables::create_hours(&config_file, Local::now().format("%Y-%m-%d(%H:%M:%S)").to_string()));
+            println!("{}", tables::create_hours(&config_file, &task.due));
         } else if args.iter().any(|i| i=="db") {
             let result = files::read_from_database(&config_file);
             for i in result.iter() {
@@ -103,6 +107,8 @@ fn main() {
             for i in result.iter() {
                 println!("{}", i.task);
             }
+        } else if args.iter().any(|i| i=="push") {
+            files::update_database(&config_file, &files::read_from_database(&config_file), &tables::read_hours(&config_file, &task.due, &input)).unwrap();
         }
     }
 }

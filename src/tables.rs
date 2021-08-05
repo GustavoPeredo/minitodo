@@ -1,16 +1,20 @@
 use crate::files::Config;
+use crate::files::Task;
 use crate::files;
 
 use chrono::Duration;
 use chrono::NaiveDateTime;
-use chrono::prelude::Local;
+use chrono::NaiveTime;
 use chrono::Datelike;
+use chrono::Timelike;
+use chrono::TimeZone;
+use chrono::offset::FixedOffset;
 
-pub fn create_hours(config_file: &Config, chosen_date: String) -> String {
+pub fn create_hours(config_file: &Config, chosen_date: &String) -> String {
 
-    let day_hours = (NaiveDateTime::parse_from_str(&chosen_date, "%Y-%m-%d(%H:%M:%S)").unwrap() + Duration::days(1)).date().and_hms(0, 0, 0);
+    let day_hours = (NaiveDateTime::parse_from_str(chosen_date, "%Y-%m-%d(%H:%M:%S)").unwrap() + Duration::days(1)).date().and_hms(0, 0, 0);
     let mut day = String::new();
-    let mut looptime = NaiveDateTime::parse_from_str(&chosen_date, "%Y-%m-%d(%H:%M:%S)").unwrap().date().and_hms(0, 0, 0);
+    let mut looptime = NaiveDateTime::parse_from_str(chosen_date, "%Y-%m-%d(%H:%M:%S)").unwrap().date().and_hms(0, 0, 0);
     let min_line_length = config_file.hours.min_line_length as usize;
     
     let mut max_tasks_in_a_day = 0;
@@ -43,7 +47,7 @@ pub fn create_hours(config_file: &Config, chosen_date: String) -> String {
 
         for line in 0..database_as_vec.len() {
             if (looptime <= NaiveDateTime::parse_from_str(&database_as_vec[line].due, "%Y-%m-%d(%H:%M:%S)").unwrap()) &&
-            (NaiveDateTime::parse_from_str(&database_as_vec[line].due, "%Y-%m-%d(%H:%M:%S)").unwrap() <= looptime + Duration::hours(24)/(24/hours_div)) {
+            (NaiveDateTime::parse_from_str(&database_as_vec[line].due, "%Y-%m-%d(%H:%M:%S)").unwrap() < looptime + Duration::hours(24)/(24/hours_div)) {
 
                 tasks_in_a_time = tasks_in_a_time + 1;
                 if database_as_vec[line].task.len() > max_line_length {
@@ -89,9 +93,9 @@ pub fn create_hours(config_file: &Config, chosen_date: String) -> String {
     day
 }
 
-pub fn create_week(config_file: &Config, chosen_date: String) -> String {
+pub fn create_week(config_file: &Config, chosen_date: &String) -> String {
     let mut weekdays = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-    let chosen_date_localdate = NaiveDateTime::parse_from_str(&chosen_date, "%Y-%m-%d(%H:%M:%S)").unwrap();
+    let chosen_date_localdate = NaiveDateTime::parse_from_str(chosen_date, "%Y-%m-%d(%H:%M:%S)").unwrap();
     let mut d_weekday = chosen_date_localdate.date().weekday().num_days_from_sunday();
     if config_file.week.starts_on_monday {
         d_weekday = chosen_date_localdate.date().weekday().num_days_from_monday();
@@ -103,7 +107,7 @@ pub fn create_week(config_file: &Config, chosen_date: String) -> String {
     let mut max_lines: u32 = 0;
 
     for weekday in 0..7 {
-        let day = create_hours(&config_file, (chosen_date_localdate + Duration::days(1)*((weekday as i32) - (d_weekday as i32) - 1)).format("%Y-%m-%d(%H:%M:%S)").to_string());
+        let day = create_hours(&config_file, &(chosen_date_localdate + Duration::days(1)*((weekday as i32) - (d_weekday as i32) - 1)).format("%Y-%m-%d(%H:%M:%S)").to_string());
         let day_as_vec = day.split("\n").collect::<Vec<&str>>();
 
         if day_as_vec.len() as u32 > max_lines {
@@ -132,4 +136,51 @@ pub fn create_week(config_file: &Config, chosen_date: String) -> String {
         week.push_str("\n");
     }
     week
+}
+
+pub fn read_hours(config_file: &Config, chosen_date: &String, day: &String) -> Vec<Task> {
+    let day_hours = (NaiveDateTime::parse_from_str(chosen_date, "%Y-%m-%d(%H:%M:%S)").unwrap() + Duration::days(1)).date().and_hms(0, 0, 0);
+    
+    let mut timestamps = NaiveDateTime::parse_from_str(chosen_date, "%Y-%m-%d(%H:%M:%S)").unwrap()
+    .date().and_hms(0,0,0);
+
+    let mut blank_chars: usize;
+
+    let mut input_tasks: Vec<Task> = Vec::new();
+
+    for mut line in day.lines() {
+        blank_chars = 0;
+        if line.len() > config_file.hours.text_format.len() {
+            match NaiveTime::parse_from_str(&line[0..config_file.hours.text_format.len()], &config_file.hours.text_format) {
+                Ok(time) => {
+                    timestamps = NaiveDateTime::parse_from_str(chosen_date, "%Y-%m-%d(%H:%M:%S)").unwrap()
+                    .date().and_hms(time.hour(), time.minute(), time.second());
+                },
+                Err(_) => {
+                    if line[0..config_file.hours.text_format.len()] != config_file.hours.horizontal_divisor.repeat(config_file.hours.text_format.len()) {
+                        if line.chars().nth(0) == config_file.hours.vertical_divisor.chars().nth(0) {
+                            line = &line[1..];
+                        }
+                        let line = line.chars().rev().collect::<String>();
+                        for ch in line.chars() {
+                            if ch.to_string() == config_file.hours.vertical_divisor || ch.to_string() == " " {
+                                blank_chars = blank_chars + 1;
+                            } else {
+                                break;
+                            }
+                        }
+                        let line = &line[blank_chars..];
+                        let line = line.chars().rev().collect::<String>();
+                        if line.len() > 2 {
+                            input_tasks.push(Task{
+                                task: line,
+                                due: timestamps.format("%Y-%m-%d(%H:%M:%S)").to_string(),
+                            });
+                        }
+                    }
+                },
+            }
+        } 
+    }
+    input_tasks
 }
