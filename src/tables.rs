@@ -1,14 +1,5 @@
-use crate::files::Config;
-use crate::files::Task;
-use crate::files;
-
-use chrono::Duration;
-use chrono::NaiveDateTime;
-use chrono::NaiveTime;
-use chrono::Datelike;
-use chrono::Timelike;
-use chrono::TimeZone;
-use chrono::offset::FixedOffset;
+use crate::files::{self, Config, Task};
+use chrono::{Duration, NaiveDateTime, NaiveTime, Datelike, Timelike};
 
 pub fn create_hours(config_file: &Config, chosen_date: &String) -> String {
 
@@ -94,12 +85,10 @@ pub fn create_hours(config_file: &Config, chosen_date: &String) -> String {
 }
 
 pub fn create_week(config_file: &Config, chosen_date: &String) -> String {
-    let mut weekdays = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
     let chosen_date_localdate = NaiveDateTime::parse_from_str(chosen_date, "%Y-%m-%d(%H:%M:%S)").unwrap();
     let mut d_weekday = chosen_date_localdate.date().weekday().num_days_from_sunday();
     if config_file.week.starts_on_monday {
         d_weekday = chosen_date_localdate.date().weekday().num_days_from_monday();
-        weekdays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
     }
     let mut week = String::new();
     let mut week_as_vec: Vec<String> = Vec::new();
@@ -115,8 +104,8 @@ pub fn create_week(config_file: &Config, chosen_date: &String) -> String {
         }
         week_as_vec.push(day.to_string());
 
-        week.push_str(weekdays[weekday as usize]);
-        week.push_str(&"-".repeat(day_as_vec[0].len() - weekdays[weekday as usize].len()));
+        week.push_str(&(chosen_date_localdate + Duration::days(1)*((weekday as i32) - (d_weekday as i32) - 1)).format(&config_file.week.text_format).to_string());
+        week.push_str(&config_file.week.horizontal_divisor.repeat(day_as_vec[0].len() - &(chosen_date_localdate + Duration::days(1)*((weekday as i32) - (d_weekday as i32) - 1)).format(&config_file.week.text_format).to_string().len()));
     }
     week.push_str("\n");
 
@@ -139,8 +128,6 @@ pub fn create_week(config_file: &Config, chosen_date: &String) -> String {
 }
 
 pub fn read_hours(config_file: &Config, chosen_date: &String, day: &String) -> Vec<Task> {
-    let day_hours = (NaiveDateTime::parse_from_str(chosen_date, "%Y-%m-%d(%H:%M:%S)").unwrap() + Duration::days(1)).date().and_hms(0, 0, 0);
-    
     let mut timestamps = NaiveDateTime::parse_from_str(chosen_date, "%Y-%m-%d(%H:%M:%S)").unwrap()
     .date().and_hms(0,0,0);
 

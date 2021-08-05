@@ -18,7 +18,6 @@ vertical_divisor = '|'
 
 [week]
 starts_on_monday = true
-max_characters = 48
 horizontal_divisor = "-"
 today_char = "*"
 text_format = "%A"

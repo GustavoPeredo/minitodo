@@ -3,13 +3,10 @@ mod files;
 mod config;
 
 use chrono::prelude::Local;
-use chrono::Duration;
-use chrono::NaiveDate;
-use chrono::NaiveDateTime;
 use chrono::offset::TimeZone;
+use chrono::{Duration, NaiveDate, NaiveDateTime};
 
-use std::io;
-use std::io::BufRead;
+use std::io::{self, BufRead};
 use std::env;
 
 use atty::Stream;
@@ -45,8 +42,10 @@ fn main() {
             match &args[i][..] {
                 "--hours" => {config_file.hours.hours = args[i+1].parse::<i32>().unwrap();},
                 "--dateformat" => {config_file.hours.text_format = args[i+1].to_string().replace('\n', "");},
+                "--weekformat" => {config_file.week.text_format = args[i+1].to_string().replace('\n', "");},
                 "--minlinelength" => {config_file.hours.min_line_length = args[i+1].parse::<i32>().unwrap();},
                 "--hd" => {config_file.hours.horizontal_divisor = args[i+1].as_bytes()[0].to_string();},
+                "--week-hd" => {config_file.week.horizontal_divisor = args[i+1].as_bytes()[0].to_string();},
                 "--vd" => {config_file.hours.vertical_divisor = args[i+1].as_bytes()[0].to_string();},
                 "--startsonsunday" => {config_file.week.starts_on_monday = false;},
                 "--input" => {input = args[i+1].to_string();},

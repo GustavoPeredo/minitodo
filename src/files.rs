@@ -1,15 +1,11 @@
 use crate::config;
 
-use std::fs;
-use std::fs::File;
+use std::fs::{self, File};
 use std::path::Path;
-use std::io::Write;
-use std::io::Read;
-use std::io::ErrorKind;
+use std::io::{Write, Read, ErrorKind};
+
 use serde_derive::Deserialize;
 use toml;
-
-use chrono::{DateTime, TimeZone};
 
 #[derive(Deserialize)]
 pub struct Config {
@@ -31,6 +27,9 @@ pub struct Hours {
 #[derive(Deserialize)]
 pub struct Week {
     pub starts_on_monday: bool,
+    pub horizontal_divisor: String,
+    pub today_char: String,
+    pub text_format: String,
 }
 
 #[derive(Deserialize)]
