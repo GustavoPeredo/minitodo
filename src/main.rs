@@ -55,7 +55,7 @@ fn main() {
                     if args[i+1].eq_ignore_ascii_case("Today") {
                         task.due = task.due;
                     } else if args[i+1].eq_ignore_ascii_case("Tommorow") {
-                        task.due = (NaiveDateTime::parse_from_str(&task.due, "%Y-%m-%d(%H:%M:%S)").unwrap() + Duration::hours(24)).format("%Y-%m-%d(%H:%M:%S)").to_string();
+                        task.due = (NaiveDateTime::parse_from_str(&task.due, "%Y-%m-%d(%H:%M:%S)").unwrap() + Duration::days(1)).format("%Y-%m-%d(%H:%M:%S)").to_string();
                     } else if args[i+1].eq_ignore_ascii_case("NextWeek") {
                         task.due = (NaiveDateTime::parse_from_str(&task.due, "%Y-%m-%d(%H:%M:%S)").unwrap() + Duration::days(7)).format("%Y-%m-%d(%H:%M:%S)").to_string();
                     } else {
@@ -100,14 +100,14 @@ fn main() {
         } else if args.iter().any(|i| i=="remove") {
             files::remove_from_database(
                 &config_file,
-                task.task
+                &task
             ).unwrap();
             let result = files::read_from_database(&config_file);
             for i in result.iter() {
                 println!("{}", i.task);
             }
         } else if args.iter().any(|i| i=="push") {
-            files::update_database(&config_file, &files::read_from_database(&config_file), &tables::read_hours(&config_file, &task.due, &input)).unwrap();
+            files::update_database(&config_file, &tables::read_hours(&config_file, &task.due, &tables::create_hours(&config_file, &task.due)), &tables::read_hours(&config_file, &task.due, &input)).unwrap();
         }
     }
 }

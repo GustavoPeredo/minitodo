@@ -127,7 +127,7 @@ pub fn create_week(config_file: &Config, chosen_date: &String) -> String {
     week
 }
 
-pub fn read_hours(config_file: &Config, chosen_date: &String, day: &String) -> Vec<Task> {
+pub fn read_hours(config_file: &Config, chosen_date: &String, day_text: &String) -> Vec<Task> {
     let mut timestamps = NaiveDateTime::parse_from_str(chosen_date, "%Y-%m-%d(%H:%M:%S)").unwrap()
     .date().and_hms(0,0,0);
 
@@ -135,7 +135,7 @@ pub fn read_hours(config_file: &Config, chosen_date: &String, day: &String) -> V
 
     let mut input_tasks: Vec<Task> = Vec::new();
 
-    for mut line in day.lines() {
+    for mut line in day_text.lines() {
         blank_chars = 0;
         if line.len() > config_file.hours.text_format.len() {
             match NaiveTime::parse_from_str(&line[0..config_file.hours.text_format.len()], &config_file.hours.text_format) {
@@ -170,4 +170,8 @@ pub fn read_hours(config_file: &Config, chosen_date: &String, day: &String) -> V
         } 
     }
     input_tasks
+}
+
+pub fn read_week(config_file: &Config, chosen_date: &String, day_text: &String) -> Vec<Task> {
+    Vec::new()
 }

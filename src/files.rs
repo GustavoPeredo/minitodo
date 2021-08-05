@@ -4,6 +4,8 @@ use std::fs::{self, File};
 use std::path::Path;
 use std::io::{Write, Read, ErrorKind};
 
+use chrono::{Duration, NaiveDateTime};
+
 use serde_derive::Deserialize;
 use toml;
 
@@ -148,11 +150,10 @@ pub fn write_to_database(config_file: &Config, task: &Task) -> std::io::Result<(
             }
         },
     };
-
-    buffer.push_str("\n");
     //buffer.push_str(&format!("({}) ", task.priority)[..]);
     buffer.push_str(&format!("{} ", task.task)[..]);
     buffer.push_str(&format!("due:{}", task.due)[..]);
+    buffer.push_str("\n");
 
     fs::write(
         Path::new(&config_file.database.path).
@@ -161,7 +162,7 @@ pub fn write_to_database(config_file: &Config, task: &Task) -> std::io::Result<(
     )
 }
 
-pub fn remove_from_database(config_file: &Config, task_name: String) -> std::io::Result<()> {
+pub fn remove_from_database(config_file: &Config, task: &Task) -> std::io::Result<()> {
 
     let database_as_vec: Vec<Task> = read_from_database(config_file);
 
@@ -182,15 +183,17 @@ pub fn remove_from_database(config_file: &Config, task_name: String) -> std::io:
     }
     
     let mut buffer_vector: Vec<&str> = buffer.split("\n").collect();
-
-    for task in 0..database_as_vec.len() {
-        if database_as_vec[task].task.trim().to_string() == task_name.trim().to_string() {
-            buffer_vector.remove(task);
+    for i in 0..database_as_vec.len() {
+        if database_as_vec[i].task == task.task &&
+        NaiveDateTime::parse_from_str(&task.due, "%Y-%m-%d(%H:%M:%S)").unwrap() <= NaiveDateTime::parse_from_str(&database_as_vec[i].due, "%Y-%m-%d(%H:%M:%S)").unwrap() &&
+        NaiveDateTime::parse_from_str(&database_as_vec[i].due, "%Y-%m-%d(%H:%M:%S)").unwrap() <= NaiveDateTime::parse_from_str(&task.due, "%Y-%m-%d(%H:%M:%S)").unwrap() + Duration::hours(config_file.hours.hours as i64)
+        { 
+            buffer_vector.remove(i);
         }
     }
 
     buffer = buffer_vector.join("\n");
-
+    
     fs::write(
         Path::new(&config_file.database.path).
         join(&config_file.database.filename),
@@ -226,15 +229,15 @@ pub fn read_from_database(config_file: &Config) -> Vec<Task> {
 
 pub fn update_database(config_file: &Config, remove_tasks: &Vec<Task>, new_tasks: &Vec<Task>) -> std::io::Result<()> {
     for i in remove_tasks.iter() {
-        match remove_from_database(config_file, i.task.to_string()) {
+        match remove_from_database(config_file, i) {
             Ok(()) => {},
-            Err(_) => {println!("Unable to remove {} fromd database", i.task);},
+            Err(_) => {println!("Unable to remove {} from database", i.task);},
         }
     }
     for i in new_tasks.iter() {
         match write_to_database(config_file, i) {
             Ok(()) => {},
-            Err(_) => {println!("Unable to remove {} fromd database", i.task);},
+            Err(_) => {println!("Unable to remove {} from database", i.task);},
         }
     }
     Ok(())
