@@ -29,6 +29,7 @@ pub struct Hours {
 #[derive(Deserialize)]
 pub struct Week {
     pub starts_on_monday: bool,
+    pub show_vertically: bool,
     pub horizontal_divisor: String,
     pub today_char: String,
     pub text_format: String,

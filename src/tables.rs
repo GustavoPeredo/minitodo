@@ -98,32 +98,41 @@ pub fn create_week(config_file: &Config, chosen_date: &String) -> String {
     for weekday in 0..7 {
         let day = create_hours(&config_file, &(chosen_date_localdate + Duration::days(1)*((weekday as i32) - (d_weekday as i32) - 1)).format("%Y-%m-%d(%H:%M:%S)").to_string());
         let day_as_vec = day.split("\n").collect::<Vec<&str>>();
-
-        if day_as_vec.len() as u32 > max_lines {
-            max_lines = day_as_vec.len() as u32;
-        }
-        week_as_vec.push(day.to_string());
-
+        
         week.push_str(&(chosen_date_localdate + Duration::days(1)*((weekday as i32) - (d_weekday as i32) - 1)).format(&config_file.week.text_format).to_string());
         week.push_str(&config_file.week.horizontal_divisor.repeat(day_as_vec[0].len() - &(chosen_date_localdate + Duration::days(1)*((weekday as i32) - (d_weekday as i32) - 1)).format(&config_file.week.text_format).to_string().len()));
-    }
-    week.push_str("\n");
-
-    for i in 0..max_lines {
-        for day in week_as_vec.iter() {
-            if day.split("\n").collect::<Vec<&str>>().len() > i as usize {
-                week.push_str(
-                    {
-                        let x = day.split("\n").collect::<Vec<&str>>();
-                        x[i as usize]
-                    }
-                );
-            } else {
-                week.push_str(&" ".repeat(config_file.hours.min_line_length as usize + 2));
+        if config_file.week.show_vertically {
+            week.push_str("\n");
+            week.push_str(&day.to_string());
+            week.push_str("\n");
+        } else {
+            if day_as_vec.len() as u32 > max_lines {
+                max_lines = day_as_vec.len() as u32;
             }
+            week_as_vec.push(day.to_string());
         }
-        week.push_str("\n");
+        
     }
+
+    if !(config_file.week.show_vertically) {
+        week.push_str("\n");
+        for i in 0..max_lines {
+            for day in week_as_vec.iter() {
+                if day.split("\n").collect::<Vec<&str>>().len() > i as usize {
+                    week.push_str(
+                        {
+                            let x = day.split("\n").collect::<Vec<&str>>();
+                            x[i as usize]
+                        }
+                    );
+                } else {
+                    week.push_str(&" ".repeat(config_file.hours.min_line_length as usize + 2));
+                }
+            }
+            week.push_str("\n");
+        }
+    } 
+    
     week
 }
 
